@@ -172,35 +172,36 @@ async function calculateResult() {
     if (passiveRange.includes(i)) { passiveSum += value; passiveCount++; }
   }
 
-  const activeAvg = activeSum / activeCount;
-  const passiveAvg = passiveSum / passiveCount;
+  const activeAvg = parseFloat((activeSum / activeCount).toFixed(2));
+  const passiveAvg = parseFloat((passiveSum / passiveCount).toFixed(2));
 
-  const aAvgNum = parseFloat(activeAvg.toFixed(2));
-  const pAvgNum = parseFloat(passiveAvg.toFixed(2));
+  const activeText = interpretNumeric(activeAvg);
+  const passiveText = interpretNumeric(passiveAvg);
 
   const resultDiv = document.getElementById("result");
   resultDiv.style.display = "block";
   resultDiv.innerHTML = `
     <h3>Результаты</h3>
     <p><strong>Группа:</strong> ${group || "—"} | <strong>Возраст:</strong> ${age || "—"} | <strong>Пол:</strong> ${gender || "—"}</p>
-    <p><strong>Активный буллинг:</strong> средний балл ${aAvgNum} — ${interpretNumeric(aAvgNum)}</p>
-    <p><strong>Пассивная виктимизация:</strong> средний балл ${pAvgNum} — ${interpretNumeric(pAvgNum)}</p>
+    <p><strong>Активный буллинг:</strong> средний балл ${activeAvg} — ${activeText}</p>
+    <p><strong>Пассивная виктимизация:</strong> средний балл ${passiveAvg} — ${passiveText}</p>
     <div class="small">
       <p>Пояснение по шкале: 0–1 — слабо выражено; около 2 — умеренно выражено; 3–4 — ярко выражено (регулярное проявление).</p>
     </div>
   `;
 
-  // Отправка данных в Google Sheets
+  // Отправка в Google Sheets
   const data = {
     group,
     age,
     gender,
-    activeScore: aAvgNum,
-    passiveScore: pAvgNum
+    activeScore: `${activeAvg} — ${activeText}`,
+    passiveScore: `${passiveAvg} — ${passiveText}`
   };
 
   await sendToGoogleSheets(data);
 }
+
 
 async function sendToGoogleSheets(data) {
   const scriptURL = "https://script.google.com/macros/s/AKfycbxxRb091epJ0bPoYbNbcYOJxRqKKU9PSf8ZPuTB3a0qjd_6LOkpVpA1MNQ461YL-10O/exec"; // <-- вставь свою ссылку
@@ -220,6 +221,7 @@ async function sendToGoogleSheets(data) {
 
 </body>
 </html>
+
 
 
 
