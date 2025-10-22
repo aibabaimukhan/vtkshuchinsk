@@ -38,31 +38,17 @@
     cursor: pointer;
   }
   button:hover { background-color: #0056b3; }
-  #result {
-    display: none;
-    background: #e9ecef;
-    padding: 15px;
-    border-radius: 8px;
-    margin-top: 20px;
-  }
   .info-block {
     display: flex;
     gap: 15px;
     flex-wrap: wrap;
     margin-bottom: 20px;
   }
-  .info-block label {
-    font-weight: bold;
-  }
+  .info-block label { font-weight: bold; }
   .info-block input, .info-block select {
     padding: 5px;
     border-radius: 5px;
     border: 1px solid #ccc;
-  }
-  .small {
-    font-size: 13px;
-    color: #555;
-    margin-top: 10px;
   }
 </style>
 </head>
@@ -99,8 +85,6 @@
   <button type="button" onclick="calculateResult()">Отправить результат</button>
 </form>
 
-<div id="result"></div>
-
 <script>
 const questions = [
   "Я кого-то обозвал.",
@@ -126,8 +110,6 @@ const answerOptions = [
   "Бывает несколько раз в неделю"
 ];
 
-// Активный буллинг: 1–6
-// Пассивная виктимизация: 7–13
 const activeRange = [0,1,2,3,4,5];
 const passiveRange = [6,7,8,9,10,11,12];
 
@@ -148,81 +130,78 @@ window.onload = function() {
 };
 
 function interpretNumeric(value) {
-    if (value < 1) return "слабо выражено";
-    if (value < 2.5) return "умеренно выражено";
-    return "ярко выражено (регулярное проявление)";
-  }
+  if (value < 1) return "слабо выражено";
+  if (value < 2.5) return "умеренно выражено";
+  return "ярко выражено (регулярное проявление)";
+}
 
-  async function calculateResult() {
-    const group = document.getElementById("group").value.trim();
-    const age = document.getElementById("age").value.trim();
-    const gender = document.getElementById("gender").value;
+async function calculateResult() {
+  const group = document.getElementById("group").value.trim();
+  const age = document.getElementById("age").value.trim();
+  const gender = document.getElementById("gender").value;
 
-    let activeSum = 0, passiveSum = 0;
-    let activeCount = 0, passiveCount = 0;
+  let activeSum = 0, passiveSum = 0;
+  let activeCount = 0, passiveCount = 0;
 
-    for (let i = 0; i < questions.length; i++) {
-      const selected = document.querySelector(`input[name="q${i}"]:checked`);
-      if (!selected) {
-        alert("Пожалуйста, ответьте на все вопросы!");
-        return;
-      }
-      const value = parseInt(selected.value);
-      if (activeRange.includes(i)) { activeSum += value; activeCount++; }
-      if (passiveRange.includes(i)) { passiveSum += value; passiveCount++; }
+  for (let i = 0; i < questions.length; i++) {
+    const selected = document.querySelector(`input[name="q${i}"]:checked`);
+    if (!selected) {
+      alert("Пожалуйста, ответьте на все вопросы!");
+      return;
     }
-
-    const activeAvg = parseFloat((activeSum / activeCount).toFixed(2));
-    const passiveAvg = parseFloat((passiveSum / passiveCount).toFixed(2));
-
-    const activeText = interpretNumeric(activeAvg);
-    const passiveText = interpretNumeric(passiveAvg);
-
-    const resultDiv = document.getElementById("result");
-    resultDiv.style.display = "block";
-    resultDiv.innerHTML = `
-      <h3>Результаты</h3>
-      <p><strong>Группа:</strong> ${group || "—"} | <strong>Возраст:</strong> ${age || "—"} | <strong>Пол:</strong> ${gender || "—"}</p>
-      <p><strong>Активный буллинг:</strong> средний балл ${activeAvg} — ${activeText}</p>
-      <p><strong>Пассивная виктимизация:</strong> средний балл ${passiveAvg} — ${passiveText}</p>
-      <div class="small">
-        <p>Пояснение по шкале: 0–1 — слабо выражено; около 2 — умеренно выражено; 3–4 — ярко выражено (регулярное проявление).</p>
-      </div>
-    `;
-
-    const data = {
-      group,
-      age,
-      gender,
-      activeScore: `${activeAvg} — ${activeText}`,
-      passiveScore: `${passiveAvg} — ${passiveText}`
-    };
-
-    await sendToGoogleSheets(data);
+    const value = parseInt(selected.value);
+    if (activeRange.includes(i)) { activeSum += value; activeCount++; }
+    if (passiveRange.includes(i)) { passiveSum += value; passiveCount++; }
   }
 
-  async function sendToGoogleSheets(data) {
-    const scriptURL = "https://script.google.com/macros/s/AKfycbxxRb091epJ0bPoYbNbcYOJxRqKKU9PSf8ZPuTB3a0qjd_6LOkpVpA1MNQ461YL-10O/exec";
-    try {
-      await fetch(scriptURL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
-      alert("Результаты успешно отправлены в таблицу!");
-    } catch (error) {
-      alert("Ошибка при отправке данных: " + error.message);
-    }
+  const activeAvg = parseFloat((activeSum / activeCount).toFixed(2));
+  const passiveAvg = parseFloat((passiveSum / passiveCount).toFixed(2));
+
+  const activeText = interpretNumeric(activeAvg);
+  const passiveText = interpretNumeric(passiveAvg);
+
+  const data = {
+    group,
+    age,
+    gender,
+    activeScore: `${activeAvg} — ${activeText}`,
+    passiveScore: `${passiveAvg} — ${passiveText}`
+  };
+
+  await sendToGoogleSheets(data);
+
+  // Очистить форму и перекинуть
+  document.getElementById("quizForm").reset();
+  document.body.innerHTML = `
+    <h2>Спасибо за участие!</h2>
+    <p>Ваши ответы успешно сохранены.</p>
+  `;
+}
+
+async function sendToGoogleSheets(data) {
+  const scriptURL = "https://script.google.com/macros/s/AKfycbxxRb091epJ0bPoYbNbcYOJxRqKKU9PSf8ZPuTB3a0qjd_6LOkpVpA1MNQ461YL-10O/exec";
+  try {
+    await fetch(scriptURL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+  } catch (error) {
+    alert("Ошибка при отправке данных: " + error.message);
   }
+}
+
+// 🔒 Блокировка F12 и инспектора
+document.onkeydown = function(e) {
+  if (e.keyCode == 123 || // F12
+      (e.ctrlKey && e.shiftKey && (e.keyCode == 'I'.charCodeAt(0) ||
+                                   e.keyCode == 'J'.charCodeAt(0))) ||
+      (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0))) {
+    e.preventDefault();
+    return false;
+  }
+};
 </script>
-
 </body>
 </html>
-
-
-
-
-
-
-
