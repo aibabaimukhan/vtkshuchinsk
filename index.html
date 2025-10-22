@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Опрос по выявлению буллинга</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      background: #f6f6f6;
+      color: #333;
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    form {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 800px;
+      margin: auto;
+    }
+    .question {
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    .options label {
+      display: block;
+      margin: 5px 0;
+    }
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    #result {
+      display: none;
+      margin-top: 30px;
+      padding: 20px;
+      background: #e9f7ef;
+      border-radius: 10px;
+      border: 1px solid #b5e0c6;
+    }
+  </style>
+</head>
+<body>
+  <h2>Опрос по выявлению буллинга (методика Д. Ольвеуса)</h2>
+
+  <form id="surveyForm">
+    <label>Группа:</label>
+    <input type="text" id="group" required />
+
+    <label>Возраст:</label>
+    <input type="number" id="age" required />
+
+    <label>Пол:</label>
+    <select id="gender" required>
+      <option value="">Выберите</option>
+      <option value="Мужской">Мужской</option>
+      <option value="Женский">Женский</option>
+    </select>
+
+    <hr>
+
+    <div id="questions"></div>
+
+    <button type="button" onclick="calculateResult()">Отправить результат</button>
+  </form>
+
+  <div id="result"></div>
+
+  <script>
+    const questions = [
+      "Я кого-то обозвал.",
+      "Я с кем-то специально не разговаривал.",
+      "Я нанес кому-то физический вред, например, толкнул или ударил.",
+      "Я распространял о ком-то сплетни.",
+      "Я угрожал.",
+      "Я украл или испортил чьи-то вещи.",
+      "Меня обзывали.",
+      "Обо мне распространяли сплетни.",
+      "Никто не хочет сидеть со мной или проводить свободное время.",
+      "У меня украли вещи.",
+      "Мне нанесли физический вред (ударили, толкнули).",
+      "Никто не разговаривает со мной.",
+      "Мне угрожали."
+    ];
+
+    const options = [
+      "Никогда не было",
+      "Было раз или два",
+      "Бывает иногда",
+      "Бывает раз в неделю",
+      "Бывает несколько раз в неделю"
+    ];
+
+    const questionContainer = document.getElementById("questions");
+
+    questions.forEach((q, i) => {
+      const div = document.createElement("div");
+      div.classList.add("question");
+      div.innerHTML = `<p><strong>${i + 1}.</strong> ${q}</p>`;
+      const optDiv = document.createElement("div");
+      optDiv.classList.add("options");
+      options.forEach((opt, j) => {
+        optDiv.innerHTML += `
+          <label><input type="radio" name="q${i}" value="${j}" required> ${opt}</label>
+        `;
+      });
+      div.appendChild(optDiv);
+      questionContainer.appendChild(div);
+    });
+
+    function interpretNumeric(avg) {
+      if (avg <= 1) return "слабо выражено";
+      if (avg > 1 && avg < 3) return "умеренно выражено";
+      return "ярко выражено (регулярное проявление)";
+    }
+
+    async function calculateResult() {
+      const form = document.getElementById("surveyForm");
+      const formData = new FormData(form);
+      const answers = [];
+
+      for (let i = 0; i < questions.length; i++) {
+        const val = formData.get(`q${i}`);
+        if (val === null) {
+          alert("Ответьте на все вопросы!");
+          return;
+        }
+        answers.push(parseInt(val));
+      }
+
+      const activeIndices = [0, 1, 2, 3, 4, 5];
+      const passiveIndices = [6, 7, 8, 9, 10, 11, 12];
+
+      const activeAvg = activeIndices.reduce((a, i) => a + answers[i], 0) / activeIndices.length;
+      const passiveAvg = passiveIndices.reduce((a, i) => a + answers[i], 0) / passiveIndices.length;
+
+      const aAvgNum = parseFloat(activeAvg.toFixed(2));
+      const pAvgNum = parseFloat(passiveAvg.toFixed(2));
+
+      const resultDiv = document.getElementById("result");
+      resultDiv.style.display = "block";
+      resultDiv.innerHTML = `
+        <h3>Результаты</h3>
+        <p><strong>Активный буллинг:</strong> ${aAvgNum} — ${interpretNumeric(aAvgNum)}</p>
+        <p><strong>Пассивная виктимизация:</strong> ${pAvgNum} — ${interpretNumeric(pAvgNum)}</p>
+      `;
+
+      const data = {
+        group: document.getElementById("group").value,
+        age: document.getElementById("age").value,
+        gender: document.getElementById("gender").value,
+        activeScore: aAvgNum,
+        passiveScore: pAvgNum
+      };
+
+      await sendToGoogleSheets(data);
+    }
+
+    async function sendToGoogleSheets(data) {
+      const scriptURL = "https://script.google.com/macros/s/AKfycbwMez3JaCwensCxMZAjO41LdYpEOLu-RBA0aII6MvZl2WrnFlCeL1Itf6WVAOOVc95G/exec"; // <-- вставь свою ссылку
+      try {
+        await fetch(scriptURL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+        alert("Результат успешно отправлен в таблицу!");
+      } catch (error) {
+        alert("Ошибка при отправке данных: " + error.message);
+      }
+    }
+  </script>
+</body>
+</html>
